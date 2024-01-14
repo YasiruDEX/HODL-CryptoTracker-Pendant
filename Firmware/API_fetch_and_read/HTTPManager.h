@@ -9,7 +9,7 @@
 class HTTPManager {
 public:
   HTTPManager();
-  void fetchData(const String& apiUrl, String& coin, String raValues[], String decValues[]);
+  void fetchData(const String& apiUrl, String& coin);
 private:
   void processPayload(const String& payload, std::vector<String>& planetNames, std::vector<String>& raValues, std::vector<String>& decValues);
 };

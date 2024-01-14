@@ -2,7 +2,7 @@
 
 HTTPManager::HTTPManager() {}
 
-void HTTPManager::fetchData(const String& apiUrl, String& coin, String raValues[], String decValues[]) {
+void HTTPManager::fetchData(const String& apiUrl, String& coin) {
   std::unique_ptr<BearSSL::WiFiClientSecure> client(new BearSSL::WiFiClientSecure);
   client->setInsecure();
   HTTPClient https;
