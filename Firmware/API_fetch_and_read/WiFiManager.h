@@ -8,6 +8,7 @@ class WiFiManager {
 public:
   WiFiManager(const char* ssid, const char* password, LiquidCrystal_I2C& lcd);
   void connect();
+  bool isConnected();
 private:
   const char* ssid;
   const char* password;

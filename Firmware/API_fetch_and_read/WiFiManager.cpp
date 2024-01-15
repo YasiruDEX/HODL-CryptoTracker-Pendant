@@ -9,11 +9,18 @@ void WiFiManager::connect() {
   Serial.print("Connecting to WiFi ..");
   lcd.setCursor(0, 0);
   lcd.print("Connecting");
+  int attempt = 0;
   while (WiFi.status() != WL_CONNECTED) {
+    attempt++;
+    if(attempt >= 10){break;}
     Serial.print('.');
     lcd.print('.');
     delay(1000);
   }
   lcd.clear();
   Serial.println();
+}
+
+bool WiFiManager::isConnected() {
+  return WiFi.status() == WL_CONNECTED;
 }

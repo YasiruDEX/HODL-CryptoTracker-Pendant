@@ -6,6 +6,8 @@
 #include "LCDManager.h"
 
 #include <U8g2lib.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266WiFi.h>
 
 #ifdef U8X8_HAVE_HW_SPI
 #include <SPI.h>
@@ -14,17 +16,22 @@
 #include <Wire.h>
 #endif
 
+const char *ssid = "NodeMCU";
+const char *password = "";
+
+ESP8266WebServer server(80);
+
 ServoManager zAxisServo;
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 U8G2_SH1106_128X32_VISIONOX_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
-const char* ssid = "UNITY";
-const char* password = "basnayake";
+const char* SSID = "UNITY";
+const char* PASSWORD = "basnayake";
 const char* referenceUrl = "hodlpendent-default-rtdb.firebaseio.com";
 String httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP";
 
 FirebaseManager firebase(referenceUrl);
-WiFiManager wifiManager(ssid, password, lcd);
+WiFiManager wifiManager(SSID, PASSWORD, lcd);
 HTTPManager httpManager;
 
 String Price = "none";
@@ -186,6 +193,8 @@ void setup() {
 }
 
 void loop() {
+
+  Serial.println(wifiManager.isConnected());
   
   httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
 
