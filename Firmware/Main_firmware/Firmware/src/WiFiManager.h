@@ -6,13 +6,12 @@
 
 class WiFiManager {
 public:
-  WiFiManager(String ssid, String password, LiquidCrystal_I2C& lcd);
+  WiFiManager(String ssid, String password);
   void connect();
   bool isConnected();
 public:
   String ssid;
   String password;
-  LiquidCrystal_I2C& lcd;
 };
 
 #endif

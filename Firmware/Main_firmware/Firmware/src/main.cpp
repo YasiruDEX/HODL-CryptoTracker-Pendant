@@ -2,8 +2,6 @@
 #include "WiFiManager.h"
 #include "FirebaseManager.h"
 #include "HTTPManager.h"
-#include "ServoManager.h"
-#include "LCDManager.h"
 
 #include <U8g2lib.h>
 #include <ESP8266WebServer.h>
@@ -21,8 +19,6 @@ const char *password = "";
 
 ESP8266WebServer server(80);
 
-ServoManager zAxisServo;
-LiquidCrystal_I2C lcd(0x27, 20, 4);
 U8G2_SH1106_128X32_VISIONOX_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
 String SSID = "UNITY";
@@ -31,7 +27,7 @@ const char* referenceUrl = "hodlpendent-default-rtdb.firebaseio.com";
 String httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP";
 
 FirebaseManager firebase(referenceUrl);
-WiFiManager wifiManager(SSID, PASSWORD, lcd);
+WiFiManager wifiManager(SSID, PASSWORD);
 HTTPManager httpManager;
 
 String Price = "none";
@@ -42,25 +38,23 @@ String coin = "BTC";
 bool up = false;
 bool arrowdir = false;
 bool WiFi_connected = true;
+bool chart_mode = true;
 
 String prevSSID = SSID;
 String prevPASSWORD = PASSWORD;
 
-String planetNeeded;
-String starData;
-String prevPlanet;
+int chart_values[10] = {03,04,02,-05,-02,05,01,-04,-07,02};
+const int CHART_VALUES_SIZE = 10;
+const int MAX_BARS = 10;
 
 // Function declarations
-int findIndex(const String array[], int size, const String& targetValue);
 void initialize();
-void handlePlanetData();
-void handleStarData();
 void makeHttpRequest();
+void handleRoot();
+void handleUpdate();
 
 unsigned long previousMillis = 0;
 const long interval = 30000;  // 20 seconds
-
-void handleUpdate();
 
 void u8g2_prepare(void) {
   u8g2.setFont(u8g2_font_6x10_tf);
@@ -104,7 +98,6 @@ void u8g2_string(uint8_t a) {
   0xfc, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x3c, 0x00, 
   0x00, 0x7c, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x7c, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x7c, 
   0x00, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x78, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
-   uint8_t frame_size = 28;
   u8g2.drawXBMP(0, 0, bitcoin_width, bitcoin_height, bitcoin_bits);
   u8g2.drawLine(48,0,48,32);
   
@@ -127,7 +120,6 @@ void u8g2_string(uint8_t a) {
   0x80, 0x1f, 0x3f, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x3e, 0x1f, 0x1e, 0x00, 0x00, 0x00, 0x00, 0x78, 
   0x0e, 0x06, 0x00, 0x00, 0x00, 0x00, 0x60, 0x0e, 0x03, 0x00, 0x00, 0x00, 0x00, 0x40, 0x86, 0x00, 
   0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
-    uint8_t frame_size = 28;
     u8g2.drawXBMP(0, 0, ethcoin_width, ethcoin_height, ethcoin_bits);
 
   }else{
@@ -149,7 +141,6 @@ void u8g2_string(uint8_t a) {
   0xf0, 0x03, 0x00, 0x7f, 0x00, 0x00, 0x00, 0xf0, 0x0f, 0xc0, 0x3f, 0x00, 0x00, 0x00, 0xe0, 0x3f, 
   0xf0, 0x1f, 0x00, 0x00, 0x00, 0xc0, 0xff, 0xff, 0x0f, 0x00, 0x00, 0x00, 0x80, 0xff, 0xff, 0x07, 
   0x00, 0x00, 0x00, 0x00, 0xfe, 0xff, 0x03, 0x00, 0x00, 0x00, 0x00, 0xfc, 0xff, 0x00, 0x00, 0x00, };
-    uint8_t frame_size = 28;
     u8g2.drawXBMP(0, 0, othcoin_width, othcoin_height, othcoin_bits);
     u8g2.drawLine(48,0,48,32);
   
@@ -163,30 +154,63 @@ void u8g2_string(uint8_t a) {
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0xf9, 0xc7, 0xf0, 0x47, 0xe0, 0x63, 0xe0, 0x70, 0x86, 
     0x31, 0x86, 0x03, 0xe3, 0x07, 0xe1, 0x8f, 0xf1, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-  if (up) {
 
-    int top_arrow = 82;
+  if(!chart_mode){
+    if (up) {
 
-    u8g2.drawTriangle(top_arrow - a + 5, 16, top_arrow + 20 - a, 2, top_arrow + 20 - a, 30);
-    u8g2.drawBox(20 + top_arrow - a, 8, 20, 16);
-    u8g2.drawXBMP(100-a, 8, dollar_block_width, dollar_block_height, dollar_block_bits); 
+      int top_arrow = 82;
 
-  } else {
-    int down_arrow = 62;
+      u8g2.drawTriangle(top_arrow - a + 5, 16, top_arrow + 20 - a, 2, top_arrow + 20 - a, 30);
+      u8g2.drawBox(20 + top_arrow - a, 8, 20, 16);
+      u8g2.drawXBMP(100-a, 8, dollar_block_width, dollar_block_height, dollar_block_bits); 
 
-    u8g2.drawTriangle(down_arrow + 55 + a, 16, down_arrow + 40 + a, 2, down_arrow + 40 + a, 30);
-    u8g2.drawBox(20 + down_arrow + a, 8, 20, 16);
-    u8g2.drawXBMP(85+a, 8, dollar_block_width, dollar_block_height, dollar_block_bits); 
+    } else {
+      int down_arrow = 62;
+
+      u8g2.drawTriangle(down_arrow + 55 + a, 16, down_arrow + 40 + a, 2, down_arrow + 40 + a, 30);
+      u8g2.drawBox(20 + down_arrow + a, 8, 20, 16);
+      u8g2.drawXBMP(85+a, 8, dollar_block_width, dollar_block_height, dollar_block_bits); 
+    }
+  }else{
+
+    int middle_line = 100;
+
+    //get the maximum value from chart_values array
+    int max_val = chart_values[0];
+
+    for (int i = 0; i < 10; i++) {
+      if (chart_values[i] > max_val) {
+        max_val = chart_values[i];
+      }
+    }
+
+    int bar[MAX_BARS];
+    int max_height = 20;
+
+    //draw the chart
+    // Calculate bar values using a loop
+    for (int i = 0; i < MAX_BARS; ++i) {
+        bar[i] = static_cast<int>((static_cast<float>(chart_values[i]) / max_val) * max_height);
+
+        // Draw bars
+        int y_position = 30 - i * 3;  // Adjust the y position based on the bar number
+        if (bar[i] > 0) {
+            u8g2.drawBox(middle_line - bar[i], y_position, bar[i], 2);
+        } else {
+            u8g2.drawBox(middle_line, y_position, -bar[i], 2);
+        }
+    }
+
+    u8g2.drawLine(middle_line,0,middle_line,32);
   }
+
+
 }
 
 uint8_t draw_state = 0;
 
 void setup() {
-  zAxisServo.attach(D3);
   u8g2.begin();
-  lcd.init();
-  lcd.backlight();
   Serial.begin(115200);
   Serial.println();
   Serial.println();
@@ -212,7 +236,7 @@ void loop() {
       Serial.println(WiFi.softAPIP());
 
       // Define webpage routes
-      // server.on("/", HTTP_GET, handleRoot);
+      server.on("/", HTTP_GET, handleRoot);
       server.on("/update", HTTP_GET, handleUpdate);
       
       // Start server
@@ -252,6 +276,23 @@ void loop() {
           Serial.println(coin);
           httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
           makeHttpRequest();
+          if (Price.toInt() - previousPrice.toInt() < 30000) {
+              // Shift values in the chart_values array
+              for (int i = 0; i < CHART_VALUES_SIZE - 1; ++i) {
+                  chart_values[i] = chart_values[i + 1];
+              }
+
+              // Set the last element to the difference of Price and previousPrice
+              chart_values[CHART_VALUES_SIZE - 1] = Price.toInt() - previousPrice.toInt();
+          }
+
+          // Print the updated chart_values array
+          Serial.print("Chart Values: ");
+          for (int i = 0; i < CHART_VALUES_SIZE; ++i) {
+              Serial.print(chart_values[i]);
+              Serial.print(", ");
+          }
+          Serial.println();
         }
 
 
