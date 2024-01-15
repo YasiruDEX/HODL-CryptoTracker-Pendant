@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "213857587059",
+    "firebase_url": "https://hodlpendent-default-rtdb.firebaseio.com",
+    "project_id": "hodlpendent",
+    "storage_bucket": "hodlpendent.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:213857587059:android:a7e8220b3141b8313e3f06",
+        "android_client_info": {
+          "package_name": "com.myfirstapp.hodl"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhEnVHJ6sDrys86ZkFpRfkWX-JhDpOklw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
