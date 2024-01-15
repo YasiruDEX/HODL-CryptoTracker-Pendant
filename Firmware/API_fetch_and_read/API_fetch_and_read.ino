@@ -21,8 +21,7 @@ U8G2_SH1106_128X32_VISIONOX_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 const char* ssid = "UNITY";
 const char* password = "basnayake";
 const char* referenceUrl = "hodlpendent-default-rtdb.firebaseio.com";
-// const char* httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=BTC-USD-SWAP";
-String httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=ETH-USD-SWAP";
+String httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP";
 
 FirebaseManager firebase(referenceUrl);
 WiFiManager wifiManager(ssid, password, lcd);
@@ -34,6 +33,7 @@ String previousPrice = "none";
 String coin = "BTC";
 
 bool up = false;
+bool arrowdir = false;
 
 String planetNeeded;
 String starData;
@@ -47,7 +47,7 @@ void handleStarData();
 void makeHttpRequest();
 
 unsigned long previousMillis = 0;
-const long interval = 20000;  // 20 seconds
+const long interval = 30000;  // 20 seconds
 
 void u8g2_prepare(void) {
   u8g2.setFont(u8g2_font_6x10_tf);
@@ -181,11 +181,13 @@ void setup() {
   initialize();
   makeHttpRequest();
   coin = firebase.getString("current_coin");
+  Serial.println(coin);
+  httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
 }
 
 void loop() {
   
-  httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "ETH-USD-SWAP";
+  httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
 
   unsigned long currentMillis = millis();
 
@@ -195,9 +197,10 @@ void loop() {
   if (currentMillis - previousMillis >= interval) {
     previousMillis = currentMillis;
     previousPrice = Price;
-    makeHttpRequest();
     coin = firebase.getString("current_coin");
     Serial.println(coin);
+    httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
+    makeHttpRequest();
   }
 
 
@@ -210,16 +213,18 @@ void loop() {
 
   // increase the state
   draw_state++;
-  if (draw_state >= 12 * 8)
+
+  if (draw_state >= 12 * 8){
     draw_state = 0;
+    }
 
   // deley between each page
   delay(100);
 
-  Serial.print("Old Price: ");
-  Serial.print(previousPrice);
-  Serial.print(", New Price: ");
-  Serial.println(Price);
+  // Serial.print("Old Price: ");
+  // Serial.print(previousPrice);
+  // Serial.print(", New Price: ");
+  // Serial.println(Price);
 
   if (priceInt > previousPriceInt) {
     up = true;
@@ -235,11 +240,8 @@ void initialize() {
   wifiManager.connect();
 }
 
-void handlePlanetData() {
-  httpManager.fetchData(httpUrl, Price);
-}
 
 void makeHttpRequest() {
-  handlePlanetData();
+  httpManager.fetchData(httpUrl, Price);
   Serial.println(Price);
 }
