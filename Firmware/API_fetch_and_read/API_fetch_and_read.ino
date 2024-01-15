@@ -25,8 +25,8 @@ ServoManager zAxisServo;
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 U8G2_SH1106_128X32_VISIONOX_F_HW_I2C u8g2(U8G2_R0, /* reset=*/U8X8_PIN_NONE);
 
-const char* SSID = "UNITY";
-const char* PASSWORD = "basnayake";
+String SSID = "UNITY";
+String PASSWORD = "basnayake";
 const char* referenceUrl = "hodlpendent-default-rtdb.firebaseio.com";
 String httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=ETH-USDT-SWAP";
 
@@ -41,6 +41,10 @@ String coin = "BTC";
 
 bool up = false;
 bool arrowdir = false;
+bool WiFi_connected = true;
+
+String prevSSID = SSID;
+String prevPASSWORD = PASSWORD;
 
 String planetNeeded;
 String starData;
@@ -194,54 +198,91 @@ void setup() {
 
 void loop() {
 
-  Serial.println(wifiManager.isConnected());
-  
-  httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
+  if(!wifiManager.isConnected()){
 
-  unsigned long currentMillis = millis();
+    if(WiFi_connected){
 
-  int priceInt = Price.toInt();
-  int previousPriceInt = previousPrice.toInt(); // Convert previousPrice to integer
+      // Connect to Wi-Fi
+      WiFi.mode(WIFI_AP);
+      WiFi.softAP(ssid, password);
+      
+      // Print the IP address
+      Serial.println(WiFi.softAPIP());
 
-  if (currentMillis - previousMillis >= interval) {
-    previousMillis = currentMillis;
-    previousPrice = Price;
-    coin = firebase.getString("current_coin");
-    Serial.println(coin);
-    httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
-    makeHttpRequest();
-  }
+      // Define webpage routes
+      // server.on("/", HTTP_GET, handleRoot);
+      server.on("/update", HTTP_GET, handleUpdate);
+      
+      // Start server
+      server.begin();
+    }
+    WiFi_connected = false;
 
+    server.handleClient();
 
+    Serial.print(SSID);
+    Serial.print(" : ");
+    Serial.println(PASSWORD);
 
-  // picture loop
-  u8g2.clearBuffer();
-  u8g2_prepare();
-  u8g2_string(draw_state & 7);
-  u8g2.sendBuffer();
-
-  // increase the state
-  draw_state++;
-
-  if (draw_state >= 12 * 8){
-    draw_state = 0;
+    if (SSID != prevSSID or PASSWORD != prevPASSWORD){
+      wifiManager.ssid = SSID;
+      wifiManager.password = PASSWORD;
+      initialize();
+      WiFi_connected = true;
     }
 
-  // deley between each page
-  delay(100);
+    prevSSID = SSID;
+    prevPASSWORD = PASSWORD;
 
-  // Serial.print("Old Price: ");
-  // Serial.print(previousPrice);
-  // Serial.print(", New Price: ");
-  // Serial.println(Price);
+  }else{
+  
+        httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
 
-  if (priceInt > previousPriceInt) {
-    up = true;
-  } else if (priceInt < previousPriceInt) {
-    up = false;
+        unsigned long currentMillis = millis();
+
+        int priceInt = Price.toInt();
+        int previousPriceInt = previousPrice.toInt(); // Convert previousPrice to integer
+
+        if (currentMillis - previousMillis >= interval) {
+          previousMillis = currentMillis;
+          previousPrice = Price;
+          coin = firebase.getString("current_coin");
+          Serial.println(coin);
+          httpUrl = "https://www.okx.com/api/v5/market/ticker?instId=" + coin + "-USDT-SWAP";
+          makeHttpRequest();
+        }
+
+
+
+        // picture loop
+        u8g2.clearBuffer();
+        u8g2_prepare();
+        u8g2_string(draw_state & 7);
+        u8g2.sendBuffer();
+
+        // increase the state
+        draw_state++;
+
+        if (draw_state >= 12 * 8){
+          draw_state = 0;
+          }
+
+        // deley between each page
+        delay(100);
+
+        // Serial.print("Old Price: ");
+        // Serial.print(previousPrice);
+        // Serial.print(", New Price: ");
+        // Serial.println(Price);
+
+        if (priceInt > previousPriceInt) {
+          up = true;
+        } else if (priceInt < previousPriceInt) {
+          up = false;
+        }
+
+        // Other non-blocking tasks can be performed here
   }
-
-  // Other non-blocking tasks can be performed here
 }
 
 // Function definitions
@@ -253,4 +294,31 @@ void initialize() {
 void makeHttpRequest() {
   httpManager.fetchData(httpUrl, Price);
   Serial.println(Price);
+}
+
+void handleRoot() {
+  String html = "<html><body>";
+  html += "<h1>ESP8266 Webpage</h1>";
+  html += "<p>SSID: " + String(SSID) + "</p>";
+  html += "<p>PASSWORD: " + String(PASSWORD) + "</p>";
+  html += "<form action='/update' method='get'>";
+  html += "SSID: <input type='text' name='SSID'><br>";
+  html += "PASSWORD: <input type='text' name='PASSWORD'><br>";
+  html += "<input type='submit' value='Update'>";
+  html += "</form>";
+  html += "</body></html>";
+
+  server.send(200, "text/html", html);
+}
+
+void handleUpdate() {
+  if (server.hasArg("SSID")) {
+    SSID = server.arg("SSID");
+  }
+
+  if (server.hasArg("PASSWORD")) {
+    PASSWORD = server.arg("PASSWORD");
+  }
+
+  handleRoot();
 }

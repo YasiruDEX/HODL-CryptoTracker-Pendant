@@ -1,6 +1,6 @@
 #include "WiFiManager.h"
 
-WiFiManager::WiFiManager(const char* ssid, const char* password, LiquidCrystal_I2C& lcd)
+WiFiManager::WiFiManager(String ssid, String password, LiquidCrystal_I2C& lcd)
   : ssid(ssid), password(password), lcd(lcd) {}
 
 void WiFiManager::connect() {
@@ -12,7 +12,7 @@ void WiFiManager::connect() {
   int attempt = 0;
   while (WiFi.status() != WL_CONNECTED) {
     attempt++;
-    if(attempt >= 10){break;}
+    if(attempt >= 15){break;}
     Serial.print('.');
     lcd.print('.');
     delay(1000);
